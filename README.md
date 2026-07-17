@@ -1,90 +1,112 @@
-# BTC AI Trend Predictor & Support/Resistance Bot
+# Panduan Setup Project di Laptop Baru
 
-Bot analisa BTC menggunakan neural network (LSTM multi-layer) untuk memprediksi
-arah tren (UP/DOWN/SIDEWAYS), dikombinasikan dengan deteksi level support &
-resistance otomatis untuk membantu menentukan titik entry LONG/SHORT.
+Panduan ini merangkum semua langkah supaya project langsung jalan tanpa perlu
+mengulang troubleshooting yang sudah pernah ditemukan sebelumnya.
 
-## ⚠️ Disclaimer
-Ini adalah tools riset & edukasi, **bukan financial advice**. Trading crypto
-berisiko tinggi. Selalu gunakan manajemen risiko (stop-loss, position sizing)
-dan jangan pernah trading dengan dana yang tidak siap Anda rugikan.
+## 0. Persiapan Sebelum Mulai
 
-## 1. Instalasi
+**WAJIB dicek dulu sebelum instalasi apapun:**
 
-```bash
+- [ ] Punya **VPN** yang aktif & berfungsi (Windscribe/ProtonVPN gratis cukup).
+      Ini wajib karena **Binance memblokir akses dari IP Indonesia** (error 451),
+      dan sebagian ISP Indonesia (mis. Indosat) juga memblokir Binance sendiri.
+      Tanpa VPN aktif, program TIDAK akan bisa mengambil data sama sekali.
+- [ ] Python **BUKAN dari Microsoft Store** — download dari python.org.
+      Python Store menyebabkan error "long path" saat install TensorFlow.
+
+## 1. Install Python (skip kalau sudah punya python.org version)
+
+1. Buka **https://www.python.org/downloads/**
+2. Download Python 3.11 (bukan versi terbaru banget, TensorFlow kadang belum
+   support versi Python paling baru — 3.11 paling aman)
+3. Saat instalasi, **WAJIB centang "Add python.exe to PATH"**
+4. Cek berhasil dengan buka PowerShell baru:
+   ```powershell
+   python --version
+   where python
+   ```
+   Pastikan hasil `where python` **TIDAK** mengarah ke folder
+   `WindowsApps` atau `PythonSoftwareFoundation...` (itu tanda Python Store).
+
+## 2. Aktifkan Long Path Support di Windows (jaga-jaga)
+
+Buka **PowerShell as Administrator** (klik kanan PowerShell di Start Menu ->
+Run as Administrator), lalu jalankan:
+```powershell
+New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
+```
+Lalu **restart komputer**.
+
+## 3. Taruh Project di Folder dengan Path Pendek
+
+**Jangan** taruh project di folder dengan nama panjang/ada spasi (misal
+`D:\Kuliah\Semester 4\Tugas AI\...`). Pakai path pendek, contoh:
+```
+C:\btc-ai-trader\
+```
+Extract semua file project (`config.py`, `train.py`, dll) ke folder ini.
+
+## 4. Buat Virtual Environment & Install Dependencies
+
+Buka PowerShell (tidak perlu admin), masuk ke folder project:
+```powershell
+cd C:\btc-ai-trader
 python -m venv venv
-source venv/bin/activate     # Windows: venv\Scripts\activate
+venv\Scripts\activate
+```
+Setelah aktif, akan muncul `(venv)` di depan prompt. Lalu install semua
+library yang dibutuhkan:
+```powershell
+python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
+Proses ini bisa memakan waktu beberapa menit (TensorFlow ukurannya besar).
 
-## 2. Struktur Project
+## 5. Nyalakan VPN, lalu Tes Koneksi ke Binance
 
-| File | Fungsi |
-|---|---|
-| `config.py` | Semua parameter (learning rate, timeframe, threshold) |
-| `data_fetcher.py` | Ambil data OHLCV historis & real-time via ccxt (Binance) |
-| `indicators.py` | Hitung EMA/RSI/MACD/ATR/BB + deteksi support & resistance |
-| `dataset.py` | Feature engineering, labeling tren, pembuatan sequence |
-| `model.py` | Arsitektur neural network (3-layer LSTM + Dense) |
-| `train.py` | Training model dari data historis |
-| `realtime_predictor.py` | Monitoring real-time + generate sinyal entry |
-| `backtest.py` | Uji performa strategi di data historis |
+**Nyalakan VPN dulu** (pilih server luar Indonesia, misal Singapore), baru tes:
+```powershell
+python -c "import requests; r = requests.get('https://api.binance.com/api/v3/ping', timeout=15); print(r.status_code, r.text)"
+```
+Harus keluar `200 {}`. Kalau muncul error/451/SSL error, VPN belum aktif dengan
+benar — jangan lanjut ke langkah berikutnya sebelum ini beres.
 
-## 3. Cara Menjalankan (step by step)
+## 6. Jalankan Project
 
-### Step 1 — Training model
-```bash
+Urutan yang benar (VPN harus tetap aktif di setiap langkah):
+
+```powershell
+# 1. Training model dari nol (wajib pertama kali)
 python train.py
-```
-Ini akan:
-1. Mengambil ±5000 candle historis BTC/USDT timeframe 1h dari Binance
-2. Menghitung indikator teknikal & label tren (UP/DOWN/SIDEWAYS)
-3. Melatih model LSTM dengan learning rate `0.001` (Adam optimizer)
-4. Menyimpan model ke `models/btc_trend_model.keras` dan scaler ke `models/scaler.pkl`
 
-### Step 2 — Backtest (WAJIB sebelum live)
-```bash
+# 2. Cek hasil training di folder logs/ -> training_curves.png, confusion_matrix.png
+
+# 3. Backtest untuk lihat performa trading
 python backtest.py
-```
-Menguji sinyal model pada data historis, menghasilkan win rate & simulasi PnL.
-**Jangan lanjut ke real-time sebelum win rate & return backtest masuk akal.**
 
-### Step 3 — Real-time monitoring
-```bash
+# 4. (Opsional, lebih lama) Validasi out-of-sample yang lebih jujur
+python walkforward_validate.py
+
+# 5. Jalankan monitoring real-time
 python realtime_predictor.py
 ```
-Bot akan polling market setiap 30 detik (bisa diubah di `config.py`), lalu
-mencetak analisa seperti:
 
-```
-============================================================
- BTC/USDT | 1h | 2026-07-07T10:30:00
-============================================================
- Harga saat ini      : 68450.5
- Prediksi tren        : UP (Bullish) (confidence 68.2%)
- Probabilitas         : DOWN=12.1%  SIDEWAYS=19.7%  UP=68.2%
- Support terdekat      : 67800.0 (strength 3x)
- Resistance terdekat   : 69200.0 (strength 5x)
- REKOMENDASI          : LONG (BUY)
- Alasan:
-   - Model memprediksi tren naik dengan confidence 68.2%.
-   - Entry ideal di dekat support 67800.0 (strength: 3x sentuhan), stop-loss di bawah support tsb.
-   - Target take-profit di resistance terdekat: 69200.0.
-============================================================
-```
+## Troubleshooting Cepat (kalau masih error)
 
-## 4. Kustomisasi Penting di `config.py`
+| Gejala | Kemungkinan Penyebab | Solusi |
+|---|---|---|
+| `OSError ... No such file or directory` saat `pip install` | Path kepanjangan / Python Store | Pindah ke `C:\` + install Python dari python.org |
+| `SSLCertVerificationError` | Interceptor SSL di laptop/jaringan (jarang) | Cek `netsh winhttp show proxy`, atau hubungi saya lagi |
+| Error `451 Service unavailable from a restricted location` | VPN mati/belum aktif | Nyalakan VPN, tes ulang langkah 5 |
+| `ConnectTimeout` ke Binance | VPN mati / jaringan lambat | Cek VPN, coba server lain |
+| `python` tidak dikenali di PowerShell | Python belum ditambah ke PATH | Install ulang Python, centang "Add to PATH" |
 
-- `TIMEFRAMES` / `PRIMARY_TIMEFRAME` — ganti timeframe analisa (15m/1h/4h/1d)
-- `LOOKBACK_WINDOW` — berapa candle historis dilihat model per prediksi
-- `PREDICTION_HORIZON` — prediksi tren berapa candle ke depan
-- `TREND_THRESHOLD_PCT` — sensitivitas label UP/DOWN vs SIDEWAYS
-- `LEARNING_RATE = 0.001` — learning rate model (sesuai requirement)
-- `CONFIDENCE_THRESHOLD` — minimal confidence agar sinyal dianggap valid
+## Catatan Penting
 
-## 5. Rencana Pengembangan Lanjutan (opsional)
-- Multi-timeframe fusion (gabungkan prediksi 15m + 1h + 4h)
-- Ganti LSTM dengan Transformer/Attention untuk akurasi lebih baik
-- Tambahkan notifikasi Telegram/Discord saat sinyal valid muncul
-- Deploy sebagai service dengan Docker + scheduler (cron/Celery)
-- Paper-trading otomatis via exchange API (testnet dulu!) sebelum live trading
+- **VPN harus selalu aktif** setiap kali menjalankan script apapun yang
+  mengambil data (`train.py`, `backtest.py`, `walkforward_validate.py`,
+  `realtime_predictor.py`, `diagnose_model.py`).
+- Jangan install `pip-system-certs` — package ini pernah menyebabkan
+  konflik SSL yang sulit didiagnosis di project ini.
+- Folder `venv/`, `__pycache__/`, `data/`, `models/`, `logs/` akan otomatis
+  terbentuk saat dipakai — tidak perlu dibuat manual.
