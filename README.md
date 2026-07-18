@@ -42,7 +42,7 @@ Lalu **restart komputer**.
 **Jangan** taruh project di folder dengan nama panjang/ada spasi (misal
 `D:\Kuliah\Semester 4\Tugas AI\...`). Pakai path pendek, contoh:
 ```
-C:\btc-ai-trader\
+C:\ai-trader-btc\
 ```
 Extract semua file project (`config.py`, `train.py`, dll) ke folder ini.
 
@@ -50,7 +50,7 @@ Extract semua file project (`config.py`, `train.py`, dll) ke folder ini.
 
 Buka PowerShell (tidak perlu admin), masuk ke folder project:
 ```powershell
-cd C:\btc-ai-trader
+cd C:\ai-trader-btc
 python -m venv venv
 venv\Scripts\activate
 ```
